@@ -13,7 +13,6 @@ public class MovieDTO {
     private long id;
     private String name;
     private int year;
-    private String[] actors;
 
     public MovieDTO() {
     }
