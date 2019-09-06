@@ -1,16 +1,22 @@
 package facades;
 
+import dto.MovieDTO;
 import utils.EMF_Creator;
 import entities.Movie;
+import java.util.ArrayList;
+import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasProperty;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import utils.Settings;
 import utils.EMF_Creator.DbSelector;
 import utils.EMF_Creator.Strategy;
 
@@ -20,6 +26,8 @@ public class MovieFacadeTest {
 
     private static EntityManagerFactory emf;
     private static MovieFacade facade;
+    private static Movie movie;
+    private static List<Movie> movies = new ArrayList<>();
 
     public MovieFacadeTest() {
     }
@@ -32,7 +40,7 @@ public class MovieFacadeTest {
                 "dev",
                 "ax2",
                 EMF_Creator.Strategy.CREATE);
-        facade = MovieFacade.getFacadeExample(emf);
+        facade = MovieFacade.getMovieFacade(emf);
     }
 
     /*   **** HINT **** 
@@ -43,8 +51,8 @@ public class MovieFacadeTest {
      */
     @BeforeAll
     public static void setUpClassV2() {
-       emf = EMF_Creator.createEntityManagerFactory(DbSelector.TEST,Strategy.DROP_AND_CREATE);
-       facade = MovieFacade.getFacadeExample(emf);
+        emf = EMF_Creator.createEntityManagerFactory(DbSelector.TEST, Strategy.DROP_AND_CREATE);
+        facade = MovieFacade.getMovieFacade(emf);
     }
 
     @AfterAll
@@ -56,13 +64,14 @@ public class MovieFacadeTest {
     //TODO -- Make sure to change the script below to use YOUR OWN entity class
     @BeforeEach
     public void setUp() {
+        facade = MovieFacade.getMovieFacade(emf);
+        movie = new Movie(2008, "Iron Man");
+        //movies.add(movie);
         EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
-            em.createNamedQuery("Movie.deleteAllRows").executeUpdate();
-            em.persist(new Movie("Some txt", "More text"));
-            em.persist(new Movie("aaa", "bbb"));
-
+            em.createNativeQuery("DELETE FROM MOVIE").executeUpdate();
+            em.persist(movie);
             em.getTransaction().commit();
         } finally {
             em.close();
@@ -74,10 +83,59 @@ public class MovieFacadeTest {
 //        Remove any data after each test was run
     }
 
-    // TODO: Delete or change this method 
-//    @Test
-//    public void testAFacadeMethod() {
-//        assertEquals(2, facade.getMovieCount(), "Expects two rows in the database");
-//    }
+    @Test
+    public void testAFacadeMethod() {
+        assertEquals(1, facade.getNumberOfMoviesInDB(), "Expects one rows in the database");
+    }
+
+    @Test
+    public void testGetAllMovies() {
+        //Arrange
+        List<MovieDTO> expResult = new ArrayList<>();
+        expResult.add(new MovieDTO(movie));
+        //Act
+        List<MovieDTO> result = facade.getAllMoviesDTO();
+        //Assert
+        assertEquals(expResult.size(), result.size());
+    }
+    @Test
+    public void testGetMovieByID() throws Exception {
+        //Arrange 
+        MovieDTO expResult = new MovieDTO(movie);
+        //Act
+        MovieDTO result = facade.getMovieDTOById(1);
+        //Assert
+        assertEquals(expResult.getId(), result.getId());
+    }
+
+    @Test
+    public void testGetMovieByName() throws Exception {
+        //Arrange 
+        MovieDTO expResult = new MovieDTO(movie);
+        //Act
+        MovieDTO result = facade.getMovieDTOByName("Iron Man");
+        //Assert
+        assertEquals(expResult.getName(), result.getName());
+    }
+
+    @Test
+    public void testMakeMovie() {
+        //Arrange
+        Movie movie2 = new Movie(2010, "Iron Man 2");
+        //Act
+        Movie result = facade.makeMovie(movie2);
+        //Assert
+        assertEquals(movie2, result);
+        // Removing the user again so it doesn't mess up the other tests.
+        EntityManager em = emf.createEntityManager();
+        try {
+            em = emf.createEntityManager();
+            em.getTransaction().begin();
+            em.remove(em.find(Movie.class, new Long(movies.size() + 1)));
+            em.getTransaction().commit();
+        } finally {
+            em.close();
+        }
+    }
 
 }
